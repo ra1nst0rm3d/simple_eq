@@ -32,15 +32,15 @@ Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, doub
     this->sample_freq = smpl;
 }
 
-vector<double>* Filter::process(vector<double> *in) {
-    static vector<double> output(in->size());
+double* Filter::process(double *in, size_t size) {
+    double* output = (double*)malloc(sizeof(double) * size);
     double bin1 = 0, bin2 = 0, bout1 = 0, bout2 = 0;
-    for(int i = 0; i < output.size(); i++) {
-        output.at(i) = (b0 / a0) * in->at(i) + (b1 / a0) * bin1 + (b2 / a0) * bin2 - (a1 / a0) * bout1 - (a2 / a0) * bout2;
+    for(int i = 0; i < sizeof(output)/sizeof(double); i++) {
+        *(output + i) = (b0 / a0) * *(in + i) + (b1 / a0) * bin1 + (b2 / a0) * bin2 - (a1 / a0) * bout1 - (a2 / a0) * bout2;
         bin2 = bin1;
-        bin1 = in->at(i);
+        bin1 = *(in + i);
         bout2 = bout1;
-        bout1 = output[i];
+        bout1 = *(output + i);
     }
-    return &output;
+    return output;
 }
