@@ -11,9 +11,10 @@
 
 #include <gst/gst.h>
 #include <gst/base/base.h>
-#include <gst/base/basetransform.h>
+#include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
+#include <gst/controller/controller.h>
 #include <pthread.h>
 #include "gst_simpleeq.h"
 
@@ -29,7 +30,7 @@ enum {
 #define gst_simpleeq_parent_class parent_class
 G_DEFINE_TYPE (GstSimpleEQ, gst_simpleeq, GST_TYPE_AUDIO_FILTER);
 
-tatic void gst_simpleeq_set_property(GObject *object, guint prop_id,
+static void gst_simpleeq_set_property(GObject *object, guint prop_id,
                                      const GValue *value, GParamSpec *pspec);
 
 static void gst_simpleeq_get_property(GObject *object, guint prop_id,
@@ -61,8 +62,8 @@ gst_simpleeq_class_init (GstSimpleEQClass *klass) {
     gobj->finalize = gst_simpleeq_finalize;
 
     g_object_class_install_property(gobj, PROP_COEFF, 
-                                    g_param_spec_value_array("coeff", "Coefficients", "Filter coefficients", g_param_spec_double ("Coeff", "Filter coefficient", "Filter coefficient", -G_MAXDOUBLE, G_MAXDOUBLE, 0.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS), G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-    g_object_class_install_property(gobj, PROP_SMPL, g_param_spec_int("samplerate", "SampleRate", "Sampling Rate", 0, 500000, 0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_CONTROLLABLE));
+                                    g_param_spec_value_array("coeff", "Coefficients", "Filter coefficients", g_param_spec_double ("Coeff", "Filter coefficient", "Filter coefficient", -G_MAXDOUBLE, G_MAXDOUBLE, 0.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS), G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_CONTROLLABLE));
+    g_object_class_install_property(gobj, PROP_SMPL, g_param_spec_int("samplerate", "SampleRate", "Sampling Rate", 0, 500000, 0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | GST_PARAM_CONTROLLABLE));
     
     caps = gst_caps_from_string(ALLOWED_CAPS);
     gst_audio_filter_class_add_pad_templates(GST_SIMPLEEQ_CLASS (klass), caps);
@@ -146,13 +147,12 @@ gst_simpleeq_setup (GstAudioFilter *base, const GstAudioInfo *info) {
         return FALSE;
     }
 
-    GST_DEBUG_OBJECT (self, "current sample_rate = %d", self->samplerate);
 
     return TRUE;
 }
 
 static gboolean
-gst_viperfx_stop (GstBaseTransform *base) {
+gst_simpleeq_stop (GstBaseTransform *base) {
     GstSimpleEQ *self = GST_SIMPLEEQ (base);
 
     return TRUE;
@@ -170,30 +170,29 @@ gst_simpleeq_preprocess(GstBaseTransform *base, GstBuffer *buf) {
     stream_time = gst_segment_to_stream_time(&base->segment, GST_FORMAT_TIME, timestamp);
 
     if (GST_CLOCK_TIME_IS_VALID (stream_time))
-        gst_object_sync_values(GST_OBJECT (filter), stream_time);
+        gst_object_sync_values(GST_OBJECT (filt), stream_time);
 
     if (G_UNLIKELY (GST_BUFFER_FLAG_IS_SET(buf, GST_BUFFER_FLAG_GAP)))
         return GST_FLOW_OK;
 
     gst_buffer_map(buf, &map, GST_MAP_READWRITE);
-    num_samples = map.size / GST_AUDIO_FILTER_BPS (filter) / 2;
+    num_samples = map.size / GST_AUDIO_FILTER_BPS (filt) / 2;
     pcm_data = (double*) map.data;
     for(int idx = 0; idx < num_samples / 2; idx++) {
-        *(buf + idx) = (b0/a0) * *(pcm_data + idx) + (b1/a0) * bin0 + (b2/a0) * bin1 - (a1/a0) * bout0 - (a2/a0) * bout1;
+        *(map.data + idx) = (b0/a0) * *(pcm_data + idx) + (b1/a0) * bin0 + (b2/a0) * bin1 - (a1/a0) * bout0 - (a2/a0) * bout1;
         bin1 = bin0;
         bin0 = *(pcm_data + idx);
         bout1 = bout0;
-        bout0 = *(buf + idx); 
+        bout0 = *(map.data + idx); 
     }
     bout1 = bout0 = bin0 = bin1 = 0;
     for(idx; idx < num_samples; idx++) {
-        *(buf + idx) = (b0/a0) * *(pcm_data + idx) + (b1/a0) * bin0 + (b2/a0) * bin1 - (a1/a0) * bout0 - (a2/a0) * bout1;
+        *(map.data + idx) = (b0/a0) * *(pcm_data + idx) + (b1/a0) * bin0 + (b2/a0) * bin1 - (a1/a0) * bout0 - (a2/a0) * bout1;
         bin1 = bin0;
         bin0 = *(pcm_data + idx);
         bout1 = bout0;
-        bout0 = *(buf + idx);
+        bout0 = *(map.data + idx);
     }
-
     gst_buffer_unmap(buf, &map);
     return GST_FLOW_OK;
 }
@@ -208,7 +207,7 @@ GST_PLUGIN_DEFINE (
   GST_VERSION_MINOR,
   simpleeq,
   "SimpleEQ",
-  simpleeq_init,
+  gst_simpleeq_init,
   VERSION,
   "Proprietary",
   "GStreamer",

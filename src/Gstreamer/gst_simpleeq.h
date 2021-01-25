@@ -7,7 +7,7 @@
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 #include <gst/audio/gstaudiofilter.h>
-#include "SIMPLEEQ_so.h"
+//#include "SIMPLEEQ_so.h"
 
 
 G_BEGIN_DECLS
@@ -19,12 +19,13 @@ G_BEGIN_DECLS
 #define GST_IS_SIMPLEEQ(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_SIMPLEEQ))
 #define GST_IS_SIMPLEEQ_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass) ,GST_TYPE_SIMPLEEQ))
 
-#define b0 self->coeffs[0]
-#define b1 self->coeffs[1]
-#define b2 self->coeffs[2]
-#define a0 self->coeffs[3]
-#define a1 self->coeffs[4]
-#define a2 self->coeffs[5]
+#define s filt->coeffs->values
+#define b0 g_value_get_double(s + 0)
+#define b1 g_value_get_double(s + 1)
+#define b2 g_value_get_double(s + 2)
+#define a0 g_value_get_double(s + 3)
+#define a1 g_value_get_double(s + 4)
+#define a2 g_value_get_double(s + 5)
 
 #define PACKAGE "SimpleEQ"
 #define VERSION "0.0.1"
