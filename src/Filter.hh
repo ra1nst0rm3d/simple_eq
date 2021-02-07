@@ -10,7 +10,7 @@ enum FilterType {
     HIGH_SHELF
 };
 
-static int numOfFilts;
+static unsigned numOfFilts;
 class Filter {
 
     private:

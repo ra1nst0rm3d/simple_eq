@@ -1,54 +1,89 @@
-#include <rtaudio/RtAudio.h>
 #include <libconfig.h++>
+#include <gstreamer-1.0/gst/gst.h>
 #include "Filter.hh"
 #include <iostream>
 
 using namespace std;
-int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
-           double streamTime, RtAudioStreamStatus status, void *data )
-{
-  if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
-  double* data_S = (double*) inputBuffer;
-  for(int i = 0; i < numOfFilts; i++) {
-      data_S = filters.at(i).process(data_S, sizeof(data_S)/sizeof(double));
-  }
-  outputBuffer = data_S;
-  return 0;
+
+static double* data;
+void process() {
+    size_t size = sizeof(data)/sizeof(*data);
+    for(unsigned i = 0; i < numOfFilts; i++) {
+        data = filters.at(i).process(data, size);
+    }
+}
+static GstPadProbeReturn
+get_data (GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
+    GstMapInfo map;
+    GstBuffer *buffer;
+
+    buffer = GST_PAD_PROBE_INFO_BUFFER (info);
+
+    buffer = gst_buffer_make_writable (buffer);
+
+    if(buffer == NULL) return GST_PAD_PROBE_OK;
+
+    if(gst_buffer_map (buffer, &map, GST_MAP_WRITE)) {
+        data = (double*) map.data;
+        process();
+        gst_buffer_unmap (buffer, &map);
+    }
+    GST_PAD_PROBE_INFO_DATA (info) = buffer;
+
+    return GST_PAD_PROBE_OK;
 }
 
+int main(int argc, char* argv[]) {
+    GMainLoop *loop;
+    GstElement *pipeline, *src, *resampler, *caps, *sink;
+    GstCaps* filter;
+    GstPad* pad;
 
-int main() {
-    libconfig::Config cfg;
-    RtAudio adac;
-    try {
-        cfg.readFile("eq.cfg");
+    gst_init(&argc, &argv);
+    loop = g_main_loop_new (NULL, FALSE);
+
+    pipeline = gst_pipeline_new ("EQ");
+    src = gst_element_factory_make("autoaudiosrc", "src");
+    if(src == NULL) {
+        g_error ("[GST] Can't create autoaudiosrc element");
     }
-    catch(const libconfig::FileIOException &fioex) { cout << "[libconfig] I/O error" << endl;}
-    catch(const libconfig::ParseException &pex) {cout << "[libconfig] Parse error at" << pex.getFile() << ":" << pex.getLine() << " - " << pex.getError() << endl;}
 
-    const libconfig::Setting& root = cfg.getRoot();
-
-    root.lookupValue("numOfFilts", numOfFilts);
-    try {
-        const libconfig::Setting& filters_s = root["filters"];
+    resampler = gst_element_factory_make("audioresample", "resampler");
+    if(resampler == NULL) {
+        g_error ("[GST] Can't create audioresample element");
     }
-    catch(const libconfig::ParseException &pex) {cout << "[libconfig] Parse error at" << pex.getFile() << ":" << pex.getLine() << " - " << pex.getError() << endl;}
-    const libconfig::Setting& filters_s = root["filters"];
-    float gain,Q,freq;
-    int filter_type;
-    for(unsigned i = 0; i < numOfFilts; i++) {
-        const libconfig::Setting& filter = filters_s[i];
 
-        if(!(filter.lookupValue("freq", freq)
-        && filter.lookupValue("gain", gain)
-        && filter.lookupValue("Q", Q)
-        && filter.lookupValue("filter_type", filter_type))) {
-            continue;
-        } else {
-            cerr << "[libconfig] Error at " << i << "filter, aborting!" << endl;
-            return -1;
-        }
-        
-        filters.at(i) = Filter()
+    caps = gst_element_factory_make("capsfilter", "caps");
+    g_assert(caps != NULL);
+
+
+    sink = gst_element_factory_make("autoaudiosink", "sink");
+    if(sink == NULL) {
+        g_error ("[GST] Can't create autoaudiosink element");
     }
+
+    gst_bin_add_many (GST_BIN (pipeline), src, resampler, caps, sink, NULL);
+    gst_element_link_many (src, resampler, caps, sink, NULL);
+    filter = gst_caps_new_simpler ("audio/x-raw",
+    "format", GST_TYPE_STRING, "F32LE",
+    "rate", GST_TYPE_INT, "48000");
+    g_object_set (G_OBJECT (caps), "caps", filter, NULL);
+    gst_caps_unref(filter);
+
+    pad = gst_element_get_static_pad (caps, "caps");
+    gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback) get_data, NULL, NULL);
+    gst_object_unref(pad);
+
+    gst_element_set_state (pipeline, GST_STATE_PLAYING);
+
+    if(gst_element_get_state (pipeline, NULL, NULL, -1) == GST_STATE_CHANGE_FAILURE) {
+        g_error ("Failed to go into PLAYING state");
+    }
+    cout << "Running..." << endl;
+    g_main_loop_run (loop);
+
+    gst_element_set_state (pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+
+    return 0;
 }
