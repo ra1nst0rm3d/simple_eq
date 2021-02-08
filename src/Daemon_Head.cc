@@ -1,9 +1,11 @@
 #include <libconfig.h++>
 #include <gstreamer-1.0/gst/gst.h>
+#include <gstreamer-1.0/gst/gstcaps.h>
 #include "Filter.hh"
 #include <iostream>
-
+#define DEFAULT_NAME "eq.cfg"
 using namespace std;
+using namespace libconfig;
 
 static double* data;
 void process() {
@@ -39,6 +41,28 @@ int main(int argc, char* argv[]) {
     GstCaps* filter;
     GstPad* pad;
 
+    Config cfg;
+
+    try {
+        if(argc > 1) {
+            cfg.readFile(argv[1]);
+        } else {
+            cfg.readFile(DEFAULT_NAME);
+        }
+    }
+    catch(const FileIOException &fioex)
+    {
+      std::cerr << "I/O error while reading file." << std::endl;
+      return(EXIT_FAILURE);
+    }
+    catch(const ParseException &pex)
+    {
+      std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
+                << " - " << pex.getError() << std::endl;
+      return(EXIT_FAILURE);
+    }
+
+
     gst_init(&argc, &argv);
     loop = g_main_loop_new (NULL, FALSE);
 
@@ -64,13 +88,13 @@ int main(int argc, char* argv[]) {
 
     gst_bin_add_many (GST_BIN (pipeline), src, resampler, caps, sink, NULL);
     gst_element_link_many (src, resampler, caps, sink, NULL);
-    filter = gst_caps_new_simpler ("audio/x-raw",
-    "format", GST_TYPE_STRING, "F32LE",
-    "rate", GST_TYPE_INT, "48000");
+    filter = gst_caps_new_simple ("audio/x-raw",
+    "format", G_TYPE_STRING, "F32LE",
+    "rate", G_TYPE_INT, "48000", NULL);
     g_object_set (G_OBJECT (caps), "caps", filter, NULL);
     gst_caps_unref(filter);
 
-    pad = gst_element_get_static_pad (caps, "caps");
+    pad = gst_element_get_static_pad (sink, "sink");
     gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback) get_data, NULL, NULL);
     gst_object_unref(pad);
 
