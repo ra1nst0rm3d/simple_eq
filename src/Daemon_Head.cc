@@ -7,7 +7,15 @@
 using namespace std;
 using namespace libconfig;
 
+struct CustomData {
+    GMainLoop* loop;
+    GstElement* pipeline;
+    GstElement *src,*resample,*caps,*sink;
+    GstCaps *filt;
+    GstPad* pad;
+};
 static double* data;
+
 void process() {
     size_t size = sizeof(data)/sizeof(*data);
     for(unsigned i = 0; i < numOfFilts; i++) {
@@ -36,13 +44,10 @@ get_data (GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
 }
 
 int main(int argc, char* argv[]) {
-    GMainLoop *loop;
-    GstElement *pipeline, *src, *resampler, *caps, *sink;
-    GstCaps* filter;
-    GstPad* pad;
+    struct CustomData data;
 
     Config cfg;
-
+/*
     try {
         if(argc > 1) {
             cfg.readFile(argv[1]);
@@ -62,52 +67,50 @@ int main(int argc, char* argv[]) {
       return(EXIT_FAILURE);
     }
 
-
+*/
     gst_init(&argc, &argv);
-    loop = g_main_loop_new (NULL, FALSE);
+    data.loop = g_main_loop_new(NULL, false);
 
-    pipeline = gst_pipeline_new ("EQ");
-    src = gst_element_factory_make("autoaudiosrc", "src");
-    if(src == NULL) {
-        g_error ("[GST] Can't create autoaudiosrc element");
+    data.pipeline = gst_pipeline_new("equalizing");
+    data.src = gst_element_factory_make("autoaudiosrc", "src");
+    if(data.src == NULL) {
+        g_error ("Can't create autoaudiosrc element");
     }
 
-    resampler = gst_element_factory_make("audioresample", "resampler");
-    if(resampler == NULL) {
-        g_error ("[GST] Can't create audioresample element");
+    data.resample = gst_element_factory_make("audioresample", "resample");
+    if(data.resample == NULL) {
+        g_error ("Can't create audioresample element");
     }
+    
+    data.caps = gst_element_factory_make("capsfilter", "filt");
+    g_assert (data.caps != NULL);
 
-    caps = gst_element_factory_make("capsfilter", "caps");
-    g_assert(caps != NULL);
-
-
-    sink = gst_element_factory_make("autoaudiosink", "sink");
-    if(sink == NULL) {
-        g_error ("[GST] Can't create autoaudiosink element");
+    data.sink = gst_element_factory_make("autoaudiosink", "sink");
+    if(data.sink == NULL) {
+        g_error ("Can't create autoaudiosink element");
     }
+    cout << "Linking..." << endl;
 
-    gst_bin_add_many (GST_BIN (pipeline), src, resampler, caps, sink, NULL);
-    gst_element_link_many (src, resampler, caps, sink, NULL);
-    filter = gst_caps_new_simple ("audio/x-raw",
-    "format", G_TYPE_STRING, "F32LE",
-    "rate", G_TYPE_INT, "48000", NULL);
-    g_object_set (G_OBJECT (caps), "caps", filter, NULL);
-    gst_caps_unref(filter);
+    gst_bin_add_many (GST_BIN(data.pipeline), data.src, data.resample, data.caps, data.sink, NULL);
+    gst_element_link_many (data.src,data.resample,data.caps,data.sink, NULL);
+    data.filt = gst_caps_new_simple ("audio/x-raw",
+    "rate", G_TYPE_INT, 48000, NULL);
+    g_object_set (G_OBJECT (data.caps), "caps", data.filt, NULL);
+    gst_caps_unref(data.filt);
 
-    pad = gst_element_get_static_pad (sink, "sink");
-    gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BUFFER, (GstPadProbeCallback) get_data, NULL, NULL);
-    gst_object_unref(pad);
+    data.pad = gst_element_get_static_pad(data.sink, "sink");
+    gst_pad_add_probe (data.pad, GST_PAD_PROBE_TYPE_BUFFER,
+    (GstPadProbeCallback) get_data, NULL, NULL);
+    gst_object_unref (data.pad);
 
-    gst_element_set_state (pipeline, GST_STATE_PLAYING);
+    gst_element_set_state (data.pipeline, GST_STATE_PLAYING);
 
-    if(gst_element_get_state (pipeline, NULL, NULL, -1) == GST_STATE_CHANGE_FAILURE) {
-        g_error ("Failed to go into PLAYING state");
-    }
+    if (gst_element_get_state (data.pipeline, NULL, NULL, -1) == GST_STATE_CHANGE_FAILURE) g_error ("Failed to go in PLAYING state");
+
     cout << "Running..." << endl;
-    g_main_loop_run (loop);
+    g_main_loop_run(data.loop);
 
-    gst_element_set_state (pipeline, GST_STATE_NULL);
-    gst_object_unref(pipeline);
-
+    gst_element_set_state (data.pipeline, GST_STATE_NULL);
+    gst_object_unref (data.pipeline);
     return 0;
 }
