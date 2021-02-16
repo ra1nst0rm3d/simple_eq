@@ -1,9 +1,13 @@
+#define DEFAULT_NAME "eq.cfg"
+#define VERSION "0.1(testing)"
+
 #include <libconfig.h++>
 #include <gstreamer-1.0/gst/gst.h>
 #include <gstreamer-1.0/gst/gstcaps.h>
 #include "Filter.hh"
 #include <iostream>
-#define DEFAULT_NAME "eq.cfg"
+#include <cstring>
+
 using namespace std;
 using namespace libconfig;
 
@@ -14,12 +18,14 @@ struct CustomData {
     GstCaps *filt;
     GstPad* pad;
 };
-static double* data;
+static double* d;
 
-void process() {
-    size_t size = sizeof(data)/sizeof(*data);
-    for(unsigned i = 0; i < numOfFilts; i++) {
-        data = filters.at(i).process(data, size);
+inline void process() {
+    auto it = filters.begin();
+    for(;it < filters.end();it++) {
+        for(unsigned i = 0; i < sizeof(d)/sizeof(*d);i++) {
+            *(d + i) = it->process(*(d + i));
+        }
     }
 }
 static GstPadProbeReturn
@@ -34,8 +40,11 @@ get_data (GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
     if(buffer == NULL) return GST_PAD_PROBE_OK;
 
     if(gst_buffer_map (buffer, &map, GST_MAP_WRITE)) {
-        data = (double*) map.data;
+        //d = (double*)malloc(map.size);
+        //memcpy((double*)d, map.data, map.size);
+        d = (double*) map.data;
         process();
+        //memcpy(map.data, d, map.size);
         gst_buffer_unmap (buffer, &map);
     }
     GST_PAD_PROBE_INFO_DATA (info) = buffer;
@@ -44,10 +53,14 @@ get_data (GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
 }
 
 int main(int argc, char* argv[]) {
+
+    if(argv[1] == "-h" || argv[1] == "--help") {
+        cout << "ra1nst0rm3d's SimpleEQ version " << VERSION << endl <<
+    }
     struct CustomData data;
 
     Config cfg;
-/*
+
     try {
         if(argc > 1) {
             cfg.readFile(argv[1]);
@@ -67,7 +80,42 @@ int main(int argc, char* argv[]) {
       return(EXIT_FAILURE);
     }
 
-*/
+    const Setting& root = cfg.getRoot();
+
+    try {
+        const Setting& filts = root["filters"];
+        numOfFilts = root.getLength();
+
+        int freq,gain,type;
+        double Q;
+
+        
+        for(unsigned i = 0; i < numOfFilts; i++) {
+            const Setting& f = filts[i];
+
+            if(!(f.lookupValue("freq", freq) &&
+                 f.lookupValue("gain", gain) &&
+                 f.lookupValue("Q", Q) &&
+                 f.lookupValue("filter_type", type))) continue;
+            
+            filters.clear();
+
+            if(type == 0) {
+                Filter fi(freq,gain,HIGH_SHELF, 48000, Q);
+                filters.push_back(fi);
+            } else {
+                Filter fi(freq,gain, LOW_SHELF, 48000, Q);
+                filters.push_back(fi);
+            }
+
+        }
+    }
+    catch(const SettingNotFoundException &nfex)
+  {
+    /*cerr << "Some setting not found, recheck config file..." << endl;
+    return 0;*/
+  }
+
     gst_init(&argc, &argv);
     data.loop = g_main_loop_new(NULL, false);
 
@@ -98,7 +146,7 @@ int main(int argc, char* argv[]) {
     g_object_set (G_OBJECT (data.caps), "caps", data.filt, NULL);
     gst_caps_unref(data.filt);
 
-    data.pad = gst_element_get_static_pad(data.sink, "sink");
+    data.pad = gst_element_get_static_pad(data.src, "src");
     gst_pad_add_probe (data.pad, GST_PAD_PROBE_TYPE_BUFFER,
     (GstPadProbeCallback) get_data, NULL, NULL);
     gst_object_unref (data.pad);

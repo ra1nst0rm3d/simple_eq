@@ -19,11 +19,14 @@ class Filter {
     double delay1[2] = {0.0f}, delay2[2] = {0.0f};
     enum FilterType filt;
     double Q = 0.25;
+    double x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+
 
     public:
     Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, double Q);
     vector<double> samples;
-    double* process(double* in, size_t size);
+    double process(double in);
+    void clear();
 
 };
 static vector<Filter> filters;
