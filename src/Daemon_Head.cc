@@ -7,6 +7,7 @@
 #include "Filter.hh"
 #include <iostream>
 #include <cstring>
+#include <vector>
 
 using namespace std;
 using namespace libconfig;
@@ -20,10 +21,10 @@ struct CustomData {
 };
 static double* d;
 
-inline void process() {
-    auto it = filters.begin();
-    for(;it < filters.end();it++) {
-        for(unsigned i = 0; i < sizeof(d)/sizeof(*d);i++) {
+inline void process(unsigned size) {
+    cout << size << endl;
+    for(vector<Filter>::iterator it = filters.begin() ;it < filters.end();it++) {
+        for(unsigned i = 0; i < size ;i++) {
             *(d + i) = it->process(*(d + i));
         }
     }
@@ -43,7 +44,8 @@ get_data (GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
         //d = (double*)malloc(map.size);
         //memcpy((double*)d, map.data, map.size);
         d = (double*) map.data;
-        process();
+        //cout << map.size << endl;
+        process(map.size);
         //memcpy(map.data, d, map.size);
         gst_buffer_unmap (buffer, &map);
     }
@@ -55,8 +57,8 @@ get_data (GstPad *pad, GstPadProbeInfo *info, gpointer user_data) {
 int main(int argc, char* argv[]) {
 
     if(argv[1] == "-h" || argv[1] == "--help") {
-        cout << "ra1nst0rm3d's SimpleEQ version " << VERSION << endl <<
-    }
+        cout << "ra1nst0rm3d's SimpleEQ version " << VERSION << endl << "U need to create a config file named " << DEFAULT_NAME << " or push name of file as first argument" << endl;
+    };
     struct CustomData data;
 
     Config cfg;
@@ -120,7 +122,7 @@ int main(int argc, char* argv[]) {
     data.loop = g_main_loop_new(NULL, false);
 
     data.pipeline = gst_pipeline_new("equalizing");
-    data.src = gst_element_factory_make("autoaudiosrc", "src");
+    data.src = gst_element_factory_make("pulsesrc", "src");
     if(data.src == NULL) {
         g_error ("Can't create autoaudiosrc element");
     }
@@ -133,7 +135,7 @@ int main(int argc, char* argv[]) {
     data.caps = gst_element_factory_make("capsfilter", "filt");
     g_assert (data.caps != NULL);
 
-    data.sink = gst_element_factory_make("autoaudiosink", "sink");
+    data.sink = gst_element_factory_make("pulsesink", "sink");
     if(data.sink == NULL) {
         g_error ("Can't create autoaudiosink element");
     }
