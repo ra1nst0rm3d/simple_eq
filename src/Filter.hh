@@ -6,8 +6,9 @@
 using namespace std;
 
 enum FilterType {
-    LOW_SHELF,
-    HIGH_SHELF
+    LOW_SHELF = 1,
+    HIGH_SHELF = 0,
+    PEAK = 2
 };
 
 static unsigned numOfFilts;

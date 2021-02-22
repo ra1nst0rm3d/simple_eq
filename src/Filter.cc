@@ -25,6 +25,14 @@ Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, doub
                 a1 = 2.0 * ((a - 1.0) - (a + 1.0) * wc);
                 a2 = (a + 1.0) - (a - 1.0) * wc - 2.0 * alpha * sqrt(a);
                 break;
+            case PEAK:
+                b0 = 1.0 + alpha * a;
+                b1 = -2.0 * wc;
+                b2 = 1.0 - alpha * a;
+                a0 = 1.0 + alpha / a;
+                a1 = -2.0 * wc;
+                a2 = 1.0 - alpha / a;
+                break;
             default:
                 cerr << "[FILT] No way! U just don't selected filter type!" << endl;
                 exit(0);      
