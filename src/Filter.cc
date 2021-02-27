@@ -33,23 +33,26 @@ Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, doub
                 a1 = -2.0 * wc;
                 a2 = 1.0 - alpha / a;
                 break;
+            case ALL_PASS:
+                b0 = 1.0 - alpha;
+                b1 = -2.0 * wc;
+                b2 = 1.0 + alpha;
+                a0 = 1.0 + alpha;
+                a1 = -2.0 * wc;
+                a2 = 1.0 - alpha;
+                break;
             default:
                 cerr << "[FILT] No way! U just don't selected filter type!" << endl;
                 exit(0);      
     }
 }
 
-void Filter::clear() {
-    x1 = x2 = y1 = y2 = 0;
-}
-
 double Filter::process(double in) {
     double output;
 
-    output = (b0 / a0) * in + (b1 / a0) * x1 + (b2 / a0) * x2 - (a1 / a0) * y1 - (a2 / a0) * y2;
-    x2 = x1;
-    x1 = in;
-    y2 = y1;
-    y1 = output;
+    output = s1 + (b0/a0) * in;
+    s1 = s2 + (b1/a0) * in - (a1/a0) * output;
+    s2 = (b2/a0) * in - (a2/a0) * output;
+
     return output;
 }

@@ -8,6 +8,7 @@
 #include <cstring>
 #include <fstream>
 #include <vector>
+#include <string>
 
 using namespace std;
 
@@ -35,8 +36,13 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   return 0;
 }
 
-void update_coeffs() {
-    ifstream in(DEFAULT_NAME);
+void update_coeffs(string name) {
+    ifstream in;
+    if(name.empty()) {
+    in.open(DEFAULT_NAME);
+    } else {
+    in.open(name);
+    }
     string line;
     filters.clear();
 
@@ -54,13 +60,18 @@ void update_coeffs() {
         filters.push_back(f);
     }
 }
+
+
 int main(int argc, char* argv[]) {
 
-    if(argv[1] == "-h" || argv[1] == "--help") {
+    if(argv[0] == "-h"s) {
         cout << "ra1nst0rm3d's SimpleEQ version " << VERSION << endl << "U need to create a config file named " << DEFAULT_NAME << " or push name of file as first argument" << endl;
+        return 0;
+    } else if(argc > 1){
+    update_coeffs(argv[1]);
+    } else {
+        update_coeffs(string(""));
     };
-    update_coeffs();
-
 
     struct CustomData data;
 
@@ -84,7 +95,7 @@ reload:
         char c = getchar();
         if(c == 'u') {
             data.aud.stopStream();
-            update_coeffs();
+            update_coeffs(string(""));
             goto reload;
         }
 
