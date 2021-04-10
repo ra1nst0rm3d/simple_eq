@@ -1,7 +1,6 @@
 /* Copyright (C) 2020 Oleg Sazonov */
 #include <iostream>
 #include <cmath>
-#include <x86intrin.h>
 #include "Filter.hh"
 
 Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, double Q) {

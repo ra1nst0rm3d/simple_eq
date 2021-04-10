@@ -27,7 +27,9 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   unsigned long bytes = nBufferFrames * 2 * sizeof(double);
   double* d = (double*) inputBuffer;
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
-          d = it->process(d, nBufferFrames * 2);
+      for(unsigned i = 0; i < 2 * nBufferFrames; i++) {
+          *(d + i) = it->process(*(d + i));
+      }
   }
 
   memcpy( outputBuffer, inputBuffer, bytes );
