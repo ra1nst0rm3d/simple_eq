@@ -1,6 +1,7 @@
 /* Copyright (C) 2020 Oleg Sazonov */
 #include <iostream>
 #include <cmath>
+#include <x86intrin.h>
 #include "Filter.hh"
 
 Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, double Q) {
@@ -43,16 +44,23 @@ Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, doub
                 break;
             default:
                 cerr << "[FILT] No way! U just don't selected filter type!" << endl;
-                exit(0);      
+                exit(0);
     }
+    b0 = b0/a0;
+    b1 = b1/a0;
+    a1 = a1/a0;
+    b2 = b2/a0;
+    a2 = a2/a0;
 }
-
+void Filter::clear() {
+    s1 = s2 = 0;
+}
 double Filter::process(double in) {
     double output;
+    output = s1 + b0 * in;
+    s1 = s2 + b1 * in - a1 * output;
+    s2 = b2 * in - a2 * output;
 
-    output = s1 + (b0/a0) * in;
-    s1 = s2 + (b1/a0) * in - (a1/a0) * output;
-    s2 = (b2/a0) * in - (a2/a0) * output;
 
     return output;
 }
