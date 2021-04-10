@@ -1,14 +1,14 @@
 /* Copyright (C) 2021 Oleg Sazonov */
-#define DEFAULT_NAME "eq.cfg"
-#define VERSION "0.1 (stable)"
-
 #include <rtaudio/RtAudio.h>
-#include "Filter.hh"
 #include <iostream>
 #include <cstring>
 #include <fstream>
 #include <vector>
 #include <string>
+
+#include "Filter.hh"
+#include "Config.hh"
+
 
 using namespace std;
 
@@ -51,7 +51,7 @@ void update_coeffs(string name) {
         exit(-1);
     }
     while(getline(in, line)) {
-        if(line.starts_with("//")) continue;
+        if(line.find("//") != std::string::npos ) continue;
         int freq,gain,filter_type;
         double Q;
         sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
@@ -75,14 +75,13 @@ int main(int argc, char* argv[]) {
 
     struct CustomData data;
 
-    unsigned int bufferFrames = 1024;
     data.iPar.deviceId = 0;
     data.iPar.nChannels = 2;
     data.oPar.deviceId = 0;
     data.oPar.nChannels = 2;
 
     try {
-        data.aud.openStream(&data.oPar, &data.iPar, RTAUDIO_FLOAT64, 48000, &bufferFrames, &inout, NULL);
+        data.aud.openStream(&data.oPar, &data.iPar, SAMPLE_TYPE, SAMPLE_RATE, &BUFFER_FRAMES, &inout, NULL);
     }
     catch (RtAudioError& e) {
         e.printMessage();
