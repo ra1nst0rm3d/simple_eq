@@ -9,4 +9,6 @@ Simple parametric EQ configurable by config file. Needs PulseAudio for thread ma
 # What I need to know for build?
 - Library: RTAudio, PulseAudio
 # How to build?
-` g++ (or clang++) -lrtaudio src/Daemon_Head.cc src/Filter.cc `
+` g++ (or clang++) -ffast-math -lrtaudio src/Daemon_Head.cc src/Filter.cc `
+# Why we need -ffast-math in compiler args?
+It fixes increasing latency over time
