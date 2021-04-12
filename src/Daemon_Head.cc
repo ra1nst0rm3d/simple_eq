@@ -9,6 +9,8 @@
 #include "Filter.hh"
 #include "Config.hh"
 
+#include <signal.h>
+
 
 using namespace std;
 
@@ -61,6 +63,12 @@ void update_coeffs(string name) {
     }
 }
 
+void sig_handler(int signo) {
+    if (signo == SIGINT) {
+        cerr << "Freeing..." << endl;
+        return;
+    }
+}
 
 int main(int argc, char* argv[]) {
 
@@ -89,22 +97,15 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-reload:
         data.aud.startStream();
-        char c = getchar();
-        if(c == 'u') {
-            data.aud.stopStream();
-            update_coeffs(string(""));
-            goto reload;
-        }
-
-        data.aud.stopStream();
+reload:
+        getchar();
+        goto reload;
     }
     catch (RtAudioError &e) {
         e.printMessage();
-        if(data.aud.isStreamOpen()) data.aud.closeStream();
-        return 0;
     }
+    data.aud.stopStream();
     if(data.aud.isStreamOpen()) data.aud.closeStream();
     return 0;
 }
