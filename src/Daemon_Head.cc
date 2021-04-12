@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <thread>
+#include <future>
 
 #include "Filter.hh"
 #include "Config.hh"
@@ -81,6 +83,16 @@ void signal_handle(int sig) {
         exit(0);
     }
 }
+
+void audioProcess() {
+    try {
+        data.aud.startStream();
+        for(;;) {sleep(150);}
+    }
+    catch (RtAudioError &e) {
+        e.printMessage();
+    }
+}
 int main(int argc, char* argv[]) {
 
     if(argv[0] == "-h"s) {
@@ -112,15 +124,9 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    try {
-        data.aud.startStream();
-reload:
-        getchar();
-        goto reload;
-    }
-    catch (RtAudioError &e) {
-        e.printMessage();
-    }
+    auto as = async(launch::async, []{ audioProcess(); });
+    as.wait();
+
     data.aud.stopStream();
     if(data.aud.isStreamOpen()) data.aud.closeStream();
     cout << big.count() << "ms max" << endl;
