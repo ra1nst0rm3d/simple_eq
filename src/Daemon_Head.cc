@@ -76,7 +76,7 @@ void update_coeffs(string name) {
 
 void signal_handle(int sig) {
     if(sig == SIGINT) {
-        cout << endl;
+        cout << endl << "Shutdown..." << endl;
         data.aud.stopStream();
         data.aud.closeStream();
         cout << big.count() << "ms max" << endl;
@@ -87,7 +87,7 @@ void signal_handle(int sig) {
 void audioProcess() {
     try {
         data.aud.startStream();
-        for(;;) {sleep(150);}
+        for(;;) {this_thread::sleep_for(chrono::seconds(150));}
     }
     catch (RtAudioError &e) {
         e.printMessage();
