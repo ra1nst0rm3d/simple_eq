@@ -5,6 +5,9 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <chrono>
+#include <thread>
+#include <future>
 
 #include "Filter.hh"
 #include "Config.hh"
@@ -18,15 +21,19 @@ struct CustomData {
     RtAudio aud;
     RtAudio::StreamParameters iPar, oPar;
 };
+static struct CustomData data;
+static chrono::duration <double, milli> big;
+
 
 // Pass-through function.
 int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
            double streamTime, RtAudioStreamStatus status, void *data )
 {
+  auto start = chrono::steady_clock::now();
+
   // Since the number of input and output channels is equal, we can do
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
-  unsigned long bytes = nBufferFrames * 2 * sizeof(double);
   double* d = (double*) inputBuffer;
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
       for(unsigned i = 0; i < 2 * nBufferFrames; i++) {
@@ -34,7 +41,11 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
       }
   }
 
-  memcpy( outputBuffer, inputBuffer, bytes );
+  memcpy( outputBuffer, inputBuffer, nBufferFrames * 2 * sizeof(double) );
+  auto end = chrono::steady_clock::now();
+  auto diff = end - start;
+  if(big < diff) big = diff;
+  //cout << chrono::duration <double, milli> (diff).count() << "ms" << endl;
   return 0;
 }
 
@@ -63,13 +74,25 @@ void update_coeffs(string name) {
     }
 }
 
-void sig_handler(int signo) {
-    if (signo == SIGINT) {
-        cerr << "Freeing..." << endl;
-        return;
+void signal_handle(int sig) {
+    if(sig == SIGINT) {
+        cout << endl << "Shutdown..." << endl;
+        data.aud.stopStream();
+        data.aud.closeStream();
+        cout << big.count() << "ms max" << endl;
+        exit(0);
     }
 }
 
+void audioProcess() {
+    try {
+        data.aud.startStream();
+        for(;;) {this_thread::sleep_for(chrono::seconds(150));}
+    }
+    catch (RtAudioError &e) {
+        e.printMessage();
+    }
+}
 int main(int argc, char* argv[]) {
 
     if(argv[0] == "-h"s) {
@@ -81,12 +104,17 @@ int main(int argc, char* argv[]) {
         update_coeffs(string(""));
     };
 
-    struct CustomData data;
+    
 
     data.iPar.deviceId = 0;
     data.iPar.nChannels = 2;
     data.oPar.deviceId = 0;
     data.oPar.nChannels = 2;
+
+    if(signal(SIGINT, signal_handle) == SIG_ERR) {
+        cout << "Failed to set signal!" << endl;
+        return -1;
+    }
 
     try {
         data.aud.openStream(&data.oPar, &data.iPar, SAMPLE_TYPE, SAMPLE_RATE, &BUFFER_FRAMES, &inout, NULL);
@@ -96,16 +124,11 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    try {
-        data.aud.startStream();
-reload:
-        getchar();
-        goto reload;
-    }
-    catch (RtAudioError &e) {
-        e.printMessage();
-    }
+    auto as = async(launch::async, []{ audioProcess(); });
+    as.wait();
+
     data.aud.stopStream();
     if(data.aud.isStreamOpen()) data.aud.closeStream();
+    cout << big.count() << "ms max" << endl;
     return 0;
 }
