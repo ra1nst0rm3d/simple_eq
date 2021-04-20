@@ -6,7 +6,6 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <thread>
 #include <future>
 
 #include "Filter.hh"
@@ -34,10 +33,10 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // Since the number of input and output channels is equal, we can do
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
-  double* d = (double*) inputBuffer;
+
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
       for(unsigned i = 0; i < 2 * nBufferFrames; i++) {
-          *(d + i) = it->process(*(d + i));
+          *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
       }
   }
 
@@ -68,7 +67,7 @@ void update_coeffs(string name) {
         int freq,gain,filter_type;
         double Q;
         sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
-        printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
+        //printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
         Filter f(freq, gain, (enum FilterType) filter_type, 48000, Q);
         filters.push_back(f);
     }
