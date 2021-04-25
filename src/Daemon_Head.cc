@@ -68,7 +68,7 @@ void update_coeffs(string name) {
         double Q;
         sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
         //printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
-        Filter f(freq, gain, (enum FilterType) filter_type, 48000, Q);
+        Filter f(freq, gain, (enum FilterType) filter_type, SAMPLE_RATE, Q);
         filters.push_back(f);
     }
 }
