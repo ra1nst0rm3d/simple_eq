@@ -35,7 +35,7 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
 
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
-      for(unsigned i = 0; i < 2 * nBufferFrames; i++) {
+      for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
           *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
       }
   }
@@ -106,9 +106,9 @@ int main(int argc, char* argv[]) {
     
 
     data.iPar.deviceId = 0;
-    data.iPar.nChannels = 2;
+    data.iPar.nChannels = CHANNELS;
     data.oPar.deviceId = 0;
-    data.oPar.nChannels = 2;
+    data.oPar.nChannels = CHANNELS;
 
     if(signal(SIGINT, signal_handle) == SIG_ERR) {
         cout << "Failed to set signal!" << endl;
