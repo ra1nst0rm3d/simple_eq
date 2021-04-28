@@ -40,7 +40,7 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
       }
   }
 
-  memcpy( outputBuffer, inputBuffer, nBufferFrames * 2 * sizeof(double) );
+  memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
   auto end = chrono::steady_clock::now();
   auto diff = end - start;
   if(big < diff) big = diff;
