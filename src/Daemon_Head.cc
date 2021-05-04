@@ -6,7 +6,6 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <thread>
 #include <future>
 
 #include "Filter.hh"
@@ -34,14 +33,14 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // Since the number of input and output channels is equal, we can do
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
-  double* d = (double*) inputBuffer;
+
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
-      for(unsigned i = 0; i < 2 * nBufferFrames; i++) {
-          *(d + i) = it->process(*(d + i));
+      for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
+          *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
       }
   }
 
-  memcpy( outputBuffer, inputBuffer, nBufferFrames * 2 * sizeof(double) );
+  memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
   auto end = chrono::steady_clock::now();
   auto diff = end - start;
   if(big < diff) big = diff;
@@ -68,8 +67,8 @@ void update_coeffs(string name) {
         int freq,gain,filter_type;
         double Q;
         sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
-        printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
-        Filter f(freq, gain, (enum FilterType) filter_type, 48000, Q);
+        //printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
+        Filter f(freq, gain, (enum FilterType) filter_type, SAMPLE_RATE, Q);
         filters.push_back(f);
     }
 }
@@ -107,9 +106,9 @@ int main(int argc, char* argv[]) {
     
 
     data.iPar.deviceId = 0;
-    data.iPar.nChannels = 2;
+    data.iPar.nChannels = CHANNELS;
     data.oPar.deviceId = 0;
-    data.oPar.nChannels = 2;
+    data.oPar.nChannels = CHANNELS;
 
     if(signal(SIGINT, signal_handle) == SIG_ERR) {
         cout << "Failed to set signal!" << endl;
