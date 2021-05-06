@@ -106,7 +106,8 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &BUFFER_FRAMES, &inout, NULL);
+	unsigned frames = BUFFER_FRAMES;
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, NULL);
     }
     catch (RtAudioError& e) {
         e.printMessage();
