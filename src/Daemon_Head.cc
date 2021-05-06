@@ -16,19 +16,14 @@
 
 using namespace std;
 
-struct CustomData {
-    RtAudio aud;
-    RtAudio::StreamParameters iPar, oPar;
-};
-static struct CustomData data;
-static chrono::duration <double, milli> big;
+static RtAudio aud;
+static RtAudio::StreamParameters iPar, oPar;
 
 
 // Pass-through function.
 int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
            double streamTime, RtAudioStreamStatus status, void *data )
 {
-  auto start = chrono::steady_clock::now();
 
   // Since the number of input and output channels is equal, we can do
   // a simple buffer copy operation here.
@@ -41,10 +36,6 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   }
 
   memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
-  auto end = chrono::steady_clock::now();
-  auto diff = end - start;
-  if(big < diff) big = diff;
-  //cout << chrono::duration <double, milli> (diff).count() << "ms" << endl;
   return 0;
 }
 
@@ -76,17 +67,16 @@ void update_coeffs(string name) {
 void signal_handle(int sig) {
     if(sig == SIGINT) {
         cout << endl << "Shutdown..." << endl;
-        data.aud.stopStream();
-        data.aud.closeStream();
-        cout << big.count() << "ms max" << endl;
+        aud.stopStream();
+        aud.closeStream();
         exit(0);
     }
 }
 
 void audioProcess() {
     try {
-        data.aud.startStream();
-        for(;;) {this_thread::sleep_for(chrono::seconds(150));}
+        aud.startStream();
+        for(;;) {this_thread::sleep_for(chrono::seconds(10));}
     }
     catch (RtAudioError &e) {
         e.printMessage();
@@ -105,10 +95,10 @@ int main(int argc, char* argv[]) {
 
     
 
-    data.iPar.deviceId = 0;
-    data.iPar.nChannels = CHANNELS;
-    data.oPar.deviceId = 0;
-    data.oPar.nChannels = CHANNELS;
+    iPar.deviceId = 0;
+    iPar.nChannels = CHANNELS;
+    oPar.deviceId = 0;
+    oPar.nChannels = CHANNELS;
 
     if(signal(SIGINT, signal_handle) == SIG_ERR) {
         cout << "Failed to set signal!" << endl;
@@ -116,18 +106,18 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        data.aud.openStream(&data.oPar, &data.iPar, SAMPLE_TYPE, SAMPLE_RATE, &BUFFER_FRAMES, &inout, NULL);
+	unsigned frames = BUFFER_FRAMES;
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, NULL);
     }
     catch (RtAudioError& e) {
         e.printMessage();
         return 0;
     }
 
-    auto as = async(launch::async, []{ audioProcess(); });
+    auto as = async(launch::async, []{ audioProcess(); }); // just launch audio processing in another thread
     as.wait();
 
-    data.aud.stopStream();
-    if(data.aud.isStreamOpen()) data.aud.closeStream();
-    cout << big.count() << "ms max" << endl;
+    aud.stopStream();
+    if(aud.isStreamOpen()) aud.closeStream();
     return 0;
 }
