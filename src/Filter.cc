@@ -49,8 +49,7 @@ void Filter::clear() {
     s1 = s2 = 0;
 }
 double Filter::process(double in) {
-    double output;
-    output = s1 + b0 * in;
+    double output = s1 + b0 * in;
     s1 = s2 + b1 * in - a1 * output;
     s2 = b2 * in - a2 * output;
 

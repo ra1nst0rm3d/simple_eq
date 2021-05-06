@@ -1,5 +1,5 @@
 #!/bin/bash
-STR='pactl list sinks | grep null'
+STR=$(pactl list sinks | grep null)
 if [ -z "$STR" ]; then
 	pactl load-module module-null-sink
 fi
