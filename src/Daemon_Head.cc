@@ -18,6 +18,7 @@ using namespace std;
 
 static RtAudio aud;
 static RtAudio::StreamParameters iPar, oPar;
+static RtAudio::StreamOptions Opt;
 
 
 // Pass-through function.
@@ -93,12 +94,13 @@ int main(int argc, char* argv[]) {
         update_coeffs(string(""));
     };
 
-    
+
 
     iPar.deviceId = 0;
     iPar.nChannels = CHANNELS;
     oPar.deviceId = 0;
     oPar.nChannels = CHANNELS;
+    Opt.flags = RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
 
     if(signal(SIGINT, signal_handle) == SIG_ERR) {
         cout << "Failed to set signal!" << endl;
@@ -106,8 +108,8 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-	unsigned frames = BUFFER_FRAMES;
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, NULL);
+	      unsigned frames = BUFFER_FRAMES;
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, &Opt);
     }
     catch (RtAudioError& e) {
         e.printMessage();
