@@ -68,8 +68,7 @@ void update_coeffs(string name) {
 void signal_handle(int sig) {
     if(sig == SIGINT) {
         cout << endl << "Shutdown..." << endl;
-        aud.stopStream();
-        aud.closeStream();
+        aud.stopStream(); aud.closeStream();
         exit(0);
     }
 }
@@ -85,7 +84,7 @@ void audioProcess() {
 }
 int main(int argc, char* argv[]) {
 
-    if(argv[0] == "-h"s) {
+    if(!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
         cout << "ra1nst0rm3d's SimpleEQ version " << VERSION << endl << "U need to create a config file named " << DEFAULT_NAME << " or push name of file as first argument" << endl;
         return 0;
     } else if(argc > 1){
