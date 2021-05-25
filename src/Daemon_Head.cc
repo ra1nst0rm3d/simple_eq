@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <thread>
 #include <future>
 
 #include "Filter.hh"
@@ -30,10 +31,11 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
 
-  for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
-      for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
-          *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
+  for(auto filter : filters) {
+     for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
+          *((double*)inputBuffer + i) = filter.process(*((double*)inputBuffer + i));
       }
+	//for_each(begin(((double*)inputBuffer)), end(((double*)inputBuffer)), [filter](auto&& item) { item = filter.process(item); });
   }
 
   memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
@@ -100,7 +102,7 @@ int main(int argc, char* argv[]) {
     iPar.nChannels = CHANNELS;
     oPar.deviceId = 0;
     oPar.nChannels = CHANNELS;
-    Opt.flags = RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
+    //Opt.flags = RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
 
     if(signal(SIGINT, signal_handle) == SIG_ERR) {
         cout << "Failed to set signal!" << endl;
@@ -109,7 +111,7 @@ int main(int argc, char* argv[]) {
 
     try {
 	      unsigned frames = BUFFER_FRAMES;
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, &Opt);
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout);
     }
     catch (RtAudioError& e) {
         e.printMessage();

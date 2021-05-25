@@ -48,6 +48,7 @@ Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, doub
 void Filter::clear() {
     s1 = s2 = 0;
 }
+
 double Filter::process(double in) {
     double output = s1 + b0 * in;
     s1 = s2 + b1 * in - a1 * output;
