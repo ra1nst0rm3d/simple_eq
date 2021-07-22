@@ -7,8 +7,10 @@
 #include <string>
 #include <chrono>
 #include <future>
+#include <thread>
 
 #include "Filter.hh"
+#include "Latency.hh"
 #include "Config.hh"
 
 #include <signal.h>
@@ -18,7 +20,7 @@ using namespace std;
 
 static RtAudio aud;
 static RtAudio::StreamParameters iPar, oPar;
-
+static Latency laten = NULL;
 
 // Pass-through function.
 int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
@@ -29,11 +31,15 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
 
+    laten.setBufferFrames(nBufferFrames);
+    
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
       for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
           *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
       }
   }
+
+  laten.process((double*)inputBuffer, sizeof(inputBuffer)/sizeof(double));
 
   memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
   return 0;
@@ -55,6 +61,12 @@ void update_coeffs(string name) {
     }
     while(getline(in, line)) {
         if(line.find("//") != std::string::npos ) continue;
+        if(line.find("latency") != std::string::npos) {
+            short latency;
+            sscanf(line.c_str(), "%s %hd", (char*)nullptr, &latency);
+            Latency latenc(latency);
+            laten = latenc;
+        }
         int freq,gain,filter_type;
         double Q;
         sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
