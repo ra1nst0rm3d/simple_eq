@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include "Latency.hh"
+#include "Config.hh"
 
 using namespace std;
 
@@ -12,7 +13,9 @@ Latency::Latency(short laten) {
     latency = laten;
 }
 
-void Latency::process(double* in, size_t size) {
+void Latency::process(double* in) {
+    if(latency == 0) return;
+//    cout << "Here: ptr = " << in << " , size = " << size << endl;
     double* out = (double*)malloc(size + length);
     for(unsigned i = 0; i < size; i++) {
         if( i % 1 == 0) {
@@ -23,7 +26,7 @@ void Latency::process(double* in, size_t size) {
         *(out + i) = *(in + i);
     }
 
-    memcpy(out, in, sizeof(out)/sizeof(double) );
+    memcpy(out, in, size + length );
     free(out);
     out = 0x0;
 }
@@ -31,6 +34,7 @@ void Latency::process(double* in, size_t size) {
 void Latency::setBufferFrames(long here) {
     buffFrames = here;
     length = sizeof(double) * buffFrames * latency;
+    size = CHANNELS * buffFrames;
 }
 
 void Latency::setLatency(long here) {

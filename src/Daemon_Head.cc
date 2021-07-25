@@ -20,7 +20,7 @@ using namespace std;
 
 static RtAudio aud;
 static RtAudio::StreamParameters iPar, oPar;
-static Latency laten = NULL;
+static Latency laten(0);
 
 // Pass-through function.
 int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
@@ -31,17 +31,16 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
 
-    laten.setBufferFrames(nBufferFrames);
-    
+    //chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
       for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
           *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
       }
   }
-
-  laten.process((double*)inputBuffer, sizeof(inputBuffer)/sizeof(double));
-
+    //chrono::steady_clock::time_point end = chrono::steady_clock::now();
+  laten.process((double*)inputBuffer);
   memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
+  //cout << "Latency: " << chrono::duration_cast<chrono::nanoseconds>(end - begin).count() << "ns" << endl;
   return 0;
 }
 
@@ -64,8 +63,7 @@ void update_coeffs(string name) {
         if(line.find("latency") != std::string::npos) {
             short latency;
             sscanf(line.c_str(), "%s %hd", (char*)nullptr, &latency);
-            Latency latenc(latency);
-            laten = latenc;
+            laten.setLatency(latency);
         }
         int freq,gain,filter_type;
         double Q;
@@ -111,6 +109,8 @@ int main(int argc, char* argv[]) {
     iPar.nChannels = CHANNELS;
     oPar.deviceId = 0;
     oPar.nChannels = CHANNELS;
+    RtAudio::StreamOptions opt;
+    opt.flags = RTAUDIO_MINIMIZE_LATENCY;
 
     if(signal(SIGINT, signal_handle) == SIG_ERR) {
         cout << "Failed to set signal!" << endl;
@@ -119,7 +119,8 @@ int main(int argc, char* argv[]) {
 
     try {
 	unsigned frames = BUFFER_FRAMES;
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, NULL);
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, NULL, &opt);
+        laten.setBufferFrames(frames);
     }
     catch (RtAudioError& e) {
         e.printMessage();
