@@ -20,7 +20,7 @@ using namespace std;
 
 static RtAudio aud;
 static RtAudio::StreamParameters iPar, oPar;
-static Latency laten(0);
+static Latency laten;
 
 // Pass-through function.
 int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
@@ -64,6 +64,7 @@ void update_coeffs(string name) {
             short latency;
             sscanf(line.c_str(), "%s %hd", (char*)nullptr, &latency);
             laten.setLatency(latency);
+            continue;
         }
         int freq,gain,filter_type;
         double Q;
