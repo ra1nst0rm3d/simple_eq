@@ -3,9 +3,29 @@
 #include <cmath>
 #include "Filter.hh"
 
-Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, double Q) {
+Filter::Filter(int GainFreq, double gain, FilterType filt, unsigned smpl, double Q) {
+   this->GainFreq = GainFreq;
+   this->gain = gain;
+   this->filt = filt;
+   this->sampleRate = smpl;
+   this->Q = Q;
+   reCalculate(); 
+}
+void Filter::clear() {
+    s1 = s2 = 0;
+}
+double Filter::process(double in) {
+    double output = s1 + b0 * in;
+    s1 = s2 + b1 * in - a1 * output;
+    s2 = b2 * in - a2 * output;
+
+
+    return output;
+}
+
+int Filter::reCalculate() {
     const double a = powf(10.0, (gain/40.0));
-    const double w = 2 * M_PI* GainFreq/smpl;
+    const double w = 2 * M_PI* GainFreq/sampleRate;
     double ws=sin(w),wc=cos(w),alpha = ws / (2 * Q),a0;
     switch (filt) {
             case LOW_SHELF:
@@ -42,17 +62,32 @@ Filter::Filter(int GainFreq, int gain, enum FilterType filt, unsigned smpl, doub
                 break;
             default:
                 cerr << "[FILT] No way! U just don't selected filter type!" << endl;
-                exit(0);
+                return -1;
     }
+    return 0;
 }
-void Filter::clear() {
-    s1 = s2 = 0;
+
+void Filter::setGain(double gain) {
+    this->gain = gain;
+    this->reCalculate();
 }
-double Filter::process(double in) {
-    double output = s1 + b0 * in;
-    s1 = s2 + b1 * in - a1 * output;
-    s2 = b2 * in - a2 * output;
 
+int Filter::setFilterType(FilterType filt) {
+    this->filt = filt;
+    return this->reCalculate();
+}
 
-    return output;
+void Filter::setGainFreq(unsigned int freq) {
+    this->GainFreq = freq;
+    this->reCalculate();
+}
+
+void Filter::setQValue(double Q) {
+    this->Q = Q;
+    this->reCalculate();
+}
+
+void Filter::setSampleRate(unsigned sampleRate) {
+    this->sampleRate = sampleRate;
+    this->reCalculate();
 }

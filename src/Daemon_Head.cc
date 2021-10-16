@@ -21,6 +21,7 @@ using namespace std;
 static RtAudio aud;
 static RtAudio::StreamParameters iPar, oPar;
 static Latency laten;
+static double gainDB; // for signal gaining
 
 // Pass-through function.
 int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
@@ -34,12 +35,12 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
     //chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
       for(unsigned i = 0; i < CHANNELS * nBufferFrames; i++) {
-          *((double*)inputBuffer + i) = it->process(*((double*)inputBuffer + i));
+          *((double*)outputBuffer + i) = it->process(*((double*)inputBuffer + i));
       }
+      it->clear();
   }
     //chrono::steady_clock::time_point end = chrono::steady_clock::now();
   laten.process((double*)inputBuffer);
-  memcpy( outputBuffer, inputBuffer, nBufferFrames * CHANNELS * sizeof(double) );
   //cout << "Latency: " << chrono::duration_cast<chrono::nanoseconds>(end - begin).count() << "ns" << endl;
   return 0;
 }
@@ -59,18 +60,21 @@ void update_coeffs(string name) {
         exit(-1);
     }
     while(getline(in, line)) {
-        if(line.find("//") != std::string::npos ) continue;
-        if(line.find("latency") != std::string::npos) {
+        if(line.find("//") != std::string::npos ) { continue; }
+        else if(line.find("latency") != std::string::npos) {
             short latency;
-            sscanf(line.c_str(), "%s %hd", (char*)nullptr, &latency);
+            sscanf(line.c_str(), "%s %hd", (char*)NULL, &latency);
             laten.setLatency(latency);
             continue;
+        }
+        else if (line.find("gain") != std::string::npos) {
+            sscanf(line.c_str(), "%s %lf", (char*)NULL, &gainDB);
         }
         int freq,gain,filter_type;
         double Q;
         sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
-        //printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
-        Filter f(freq, gain, (enum FilterType) filter_type, SAMPLE_RATE, Q);
+        printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
+        Filter f(freq, gain, (FilterType) filter_type, Q);
         filters.push_back(f);
     }
 }
@@ -111,21 +115,30 @@ int main(int argc, char* argv[]) {
     oPar.deviceId = 0;
     oPar.nChannels = CHANNELS;
     RtAudio::StreamOptions opt;
+    RtAudio::DeviceInfo info = aud.getDeviceInfo(oPar.deviceId);
     opt.flags = RTAUDIO_MINIMIZE_LATENCY;
-
-    if(signal(SIGINT, signal_handle) == SIG_ERR) {
-        cout << "Failed to set signal!" << endl;
-        return -1;
+    //cout << *(info.sampleRates.end() - 1) << endl; // finding max possible sampleRate
+    
+    for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
+        it->setSampleRate(*(info.sampleRates.end() - 1));
     }
+    
 
     try {
 	unsigned frames = BUFFER_FRAMES;
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, SAMPLE_RATE, &frames, &inout, NULL, &opt);
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, *(info.sampleRates.end() - 1), &frames, &inout, NULL, &opt);
         laten.setBufferFrames(frames);
     }
     catch (RtAudioError& e) {
         e.printMessage();
         return 0;
+    }
+
+    if(signal(SIGINT, signal_handle) == SIG_ERR) {
+        cout << "Failed to set signal!" << endl;
+        aud.stopStream();
+        aud.closeStream();
+        return -1;
     }
 
     auto as = async(launch::async, []{ audioProcess(); }); // just launch audio processing in another thread
