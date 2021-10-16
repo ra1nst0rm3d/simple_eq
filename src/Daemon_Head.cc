@@ -35,7 +35,7 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
     it->process((double*)outputBuffer, (double*) inputBuffer, nBufferFrames * CHANNELS);
   }
     chrono::steady_clock::time_point end = chrono::steady_clock::now();
-  cout << "Latency: " << chrono::duration_cast<chrono::nanoseconds>(end - begin).count() << "ns\n";
+  cout << "Latency: " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "ms\n";
   return 0;
 }
 

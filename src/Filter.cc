@@ -15,7 +15,7 @@ void Filter::clear() {
     s1 = s2 = 0;
 }
 void Filter::process(double* output, double* input, size_t size) {
-    unsigned i = 1;
+    unsigned i = 0;
     double *out = (double*)output, *in = (double*)input;
 
     while(i != size) {
