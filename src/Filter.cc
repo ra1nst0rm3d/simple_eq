@@ -14,13 +14,19 @@ Filter::Filter(int GainFreq, double gain, FilterType filt, unsigned smpl, double
 void Filter::clear() {
     s1 = s2 = 0;
 }
-double Filter::process(double in) {
-    double output = s1 + b0 * in;
-    s1 = s2 + b1 * in - a1 * output;
-    s2 = b2 * in - a2 * output;
+void Filter::process(double* output, double* input, size_t size) {
+    unsigned i = 1;
+    double *out = (double*)output, *in = (double*)input;
 
-
-    return output;
+    while(i != size) {
+    *out = s1 + b0 * *in;
+    s1 = s2 + b1 * *in - a1 * *out ;
+    s2 = b2 * *in - a2 * *out;
+    in++;
+    out++;
+    i++;
+    }
+    
 }
 
 int Filter::reCalculate() {

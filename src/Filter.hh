@@ -28,7 +28,7 @@ class Filter {
 
     public:
     Filter(int freq = 50, double gain = 3.5, enum FilterType filt = PEAK, unsigned sampleRate = 44100, double Q = 2);
-    double process(double in);
+    void process(double* output, double* input, size_t size);
     void clear();
 
     void setGainFreq(unsigned freq);
