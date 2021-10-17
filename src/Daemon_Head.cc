@@ -30,12 +30,12 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // Since the number of input and output channels is equal, we can do
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
-    chrono::steady_clock::time_point begin = chrono::steady_clock::now();
+    //chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
     it->process((double*)outputBuffer, (double*) inputBuffer, nBufferFrames * CHANNELS);
   }
-    chrono::steady_clock::time_point end = chrono::steady_clock::now();
-  cout << "Latency: " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "ms\n";
+    //chrono::steady_clock::time_point end = chrono::steady_clock::now();
+  //cout << "Latency: " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "ms\n";
   return 0;
 }
 
@@ -58,10 +58,10 @@ void update_coeffs(string name) {
         else if (line.find("gain") != std::string::npos) {
             sscanf(line.c_str(), "%s %lf", (char*)NULL, &gainDB);
         } else if(!line.empty()) {
-        int freq,gain,filter_type;
-        double Q;
-        sscanf(line.c_str(), "%d %d %lf %d", &freq, &gain, &Q, &filter_type);
-        printf("%d %d %lf %d\n", freq, gain, Q, filter_type);
+        int freq,filter_type;
+        double Q,gain;
+        sscanf(line.c_str(), "%d %lf %lf %d", &freq, &gain, &Q, &filter_type);
+        printf("%d %lf %lf %d\n", freq, gain, Q, filter_type);
         Filter f(freq, gain, (FilterType) filter_type, Q);
         filters.push_back(f);
         } else {continue;}
@@ -106,16 +106,16 @@ int main(int argc, char* argv[]) {
     RtAudio::StreamOptions opt;
     RtAudio::DeviceInfo info = aud.getDeviceInfo(oPar.deviceId);
     opt.flags = RTAUDIO_MINIMIZE_LATENCY;
-    cout << *(info.sampleRates.end() - 1) << endl; // finding max possible sampleRate
+    cout << *(info.sampleRates.end() - 3) << endl; // finding max possible sampleRate
     
     for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
-        it->setSampleRate(*(info.sampleRates.end() - 1));
+        it->setSampleRate(*(info.sampleRates.end() - 3));
     }
     
 
     try {
 	    unsigned frames = BUFFER_FRAMES;
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, *(info.sampleRates.end() - 1), &frames, &inout, &opt);
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, *(info.sampleRates.end() - 3), &frames, &inout, &opt);
     }
     catch (RtAudioError& e) {
         e.printMessage();
