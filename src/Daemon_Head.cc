@@ -30,12 +30,12 @@ int inout( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
   // Since the number of input and output channels is equal, we can do
   // a simple buffer copy operation here.
   if ( status ) std::cout << "Stream over/underflow detected." << std::endl;
-    //chrono::steady_clock::time_point begin = chrono::steady_clock::now();
+   //chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
     it->process((double*)outputBuffer, (double*) inputBuffer, nBufferFrames * CHANNELS);
   }
     //chrono::steady_clock::time_point end = chrono::steady_clock::now();
-  //cout << "Latency: " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "ms\n";
+  //cout << "Latency: " << chrono::duration_cast<chrono::nanoseconds>(end - begin).count() << "ns\n";
   return 0;
 }
 
@@ -106,16 +106,16 @@ int main(int argc, char* argv[]) {
     RtAudio::StreamOptions opt;
     RtAudio::DeviceInfo info = aud.getDeviceInfo(oPar.deviceId);
     opt.flags = RTAUDIO_MINIMIZE_LATENCY;
-    cout << *(info.sampleRates.end() - 3) << endl; // finding max possible sampleRate
+    cout << *(info.sampleRates.end() - 1) << endl; // finding max possible sampleRate
     
     for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
-        it->setSampleRate(*(info.sampleRates.end() - 3));
+        it->setSampleRate(*(info.sampleRates.end() - 1));
     }
     
 
     try {
 	    unsigned frames = BUFFER_FRAMES;
-        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, *(info.sampleRates.end() - 3), &frames, &inout, &opt);
+        aud.openStream(&oPar, &iPar, SAMPLE_TYPE, *(info.sampleRates.end() - 1), &frames, &inout, &opt);
     }
     catch (RtAudioError& e) {
         e.printMessage();
