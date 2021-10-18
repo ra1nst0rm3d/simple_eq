@@ -61,7 +61,7 @@ void update_coeffs(string name) {
         int freq,filter_type;
         double Q,gain;
         sscanf(line.c_str(), "%d %lf %lf %d", &freq, &gain, &Q, &filter_type);
-        printf("%d %lf %lf %d\n", freq, gain, Q, filter_type);
+//      printf("%d %lf %lf %d\n", freq, gain, Q, filter_type);
         Filter f(freq, gain, (FilterType) filter_type, Q);
         filters.push_back(f);
         } else {continue;}
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     RtAudio::StreamOptions opt;
     RtAudio::DeviceInfo info = aud.getDeviceInfo(oPar.deviceId);
     opt.flags = RTAUDIO_MINIMIZE_LATENCY;
-    cout << *(info.sampleRates.end() - 1) << endl; // finding max possible sampleRate
+    //cout << *(info.sampleRates.end() - 1) << endl; // finding max possible sampleRate
     
     for(vector<Filter>::iterator it = filters.begin(); it < filters.end(); it++) {
         it->setSampleRate(*(info.sampleRates.end() - 1));
