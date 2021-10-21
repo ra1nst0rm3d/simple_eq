@@ -5,9 +5,9 @@ Simple parametric EQ configurable by config file. Needs PulseAudio for thread ma
 - Filter class (it's pretty fast)
 
 # What is pretty buggy? :)
-- Other non-PA platforms: Win., Mac OS
+- Other non-PW platforms: Win., Mac OS
 # What I need to know for build?
-- Library: RTAudio, PA-capable audio server
+- Library: RTAudio, PipeWire (PulseAudio very buggy)
 # How to build?
 ` make (for release build)`
 ` make debug (for debug build)`
