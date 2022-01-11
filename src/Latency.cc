@@ -34,9 +34,13 @@ void Latency::process(double* in) {
 void Latency::setBufferFrames(long here) {
     buffFrames = here;
     length = sizeof(double) * buffFrames * latency;
-    size = CHANNELS * buffFrames;
+    size = chan * buffFrames;
 }
 
 void Latency::setLatency(long here) {
     latency = here;
+}
+
+void Latency::setChannels(unsigned short here) {
+    chan = here;
 }

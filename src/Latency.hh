@@ -8,12 +8,13 @@ class Latency {
     void setBufferFrames(long here);
     void setLatency(long here);
     void process(double* in);
+    void setChannels(unsigned short here);
     Latency(short laten);
     Latency();
     
     private:
-    short latency, buffFrames;
-    long length, size;
+    unsigned short latency, buffFrames, chan;
+    unsigned long length, size;
 
 };
 

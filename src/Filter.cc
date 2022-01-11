@@ -15,9 +15,8 @@ void Filter::clear() {
     s1 = s2 = 0;
 }
 void Filter::process(double* output, double* input, size_t size) {
-    unsigned i = 0;
     double *out = (double*)output, *in = (double*)input;
-
+    /*
     while(i != size) {
     *out = s1 + b0 * *in;
     s1 = s2 + b1 * *in - a1 * *out ;
@@ -26,7 +25,14 @@ void Filter::process(double* output, double* input, size_t size) {
     out++;
     i++;
     }
-    
+    */
+    for(unsigned i = 0; i < size; i++) {
+        *out = s1 + b0 * *in;
+        s1 = s2 + b1 * *in - a1 * *out;
+        s2 = b2 * *in - a2 * *out;
+        in++;
+        out++;
+    }
 }
 
 int Filter::reCalculate() {
